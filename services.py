@@ -6,11 +6,9 @@ from sqlalchemy.orm import Session
 
 from models import Duck, Loan, Member
 
-LOAN_PERIOD = timedelta(days=14)
-
 
 class LoanError(Exception):
-    """A borrow request that cannot be approved."""
+    """A borrow or return request that cannot be approved."""
 
 
 def available_ducks(session: Session) -> list[Duck]:
@@ -21,6 +19,10 @@ def available_ducks(session: Session) -> list[Duck]:
         .order_by(Duck.duck_id)
     )
     return list(session.scalars(stmt))
+
+
+def due_date_for(duck: Duck, borrow_date: date) -> date:
+    return borrow_date + timedelta(days=duck.loan_period_days)
 
 
 def borrow_duck(session: Session, member_id: str, duck_id: str, today: date | None = None) -> Loan:
@@ -42,9 +44,26 @@ def borrow_duck(session: Session, member_id: str, duck_id: str, today: date | No
         member=member,
         duck=duck,
         borrow_date=today,
-        due_date=today + LOAN_PERIOD,
+        # Standard and Deluxe ducks differ only in these two values.
+        due_date=due_date_for(duck, today),
+        deposit_held=duck.required_deposit,
     )
     session.add(loan)
+    session.commit()
+    return loan
+
+
+def return_duck(session: Session, member_id: str, loan_id: str, today: date | None = None) -> Loan:
+    """Close a member's active loan. Any deposit held on it is refunded in full."""
+    today = today or date.today()
+
+    loan = session.get(Loan, loan_id)
+    if loan is None or loan.member_id != member_id:
+        raise LoanError(f"Member {member_id} has no loan {loan_id}.")
+    if not loan.is_active:
+        raise LoanError(f"Loan {loan_id} was already returned.")
+
+    loan.return_date = today
     session.commit()
     return loan
 
