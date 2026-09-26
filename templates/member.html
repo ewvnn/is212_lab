@@ -7,15 +7,29 @@
   <h3>My loans</h3>
   {% if member.loans %}
     <table>
-      <tr><th>Loan</th><th>Duck</th><th>Borrowed</th><th>Due back</th><th>Status</th></tr>
+      <tr><th>Loan</th><th>Duck</th><th>Borrowed</th><th>Due back</th><th>Status</th><th>Deposit</th><th></th></tr>
       {% for loan in member.loans %}
         {% set label, css = loan_status(loan, today) %}
         <tr>
           <td>{{ loan.loan_id }}</td>
-          <td>{{ loan.duck_id }}</td>
+          <td>{{ loan.duck_id }} <span class="muted">({{ loan.duck.label }})</span></td>
           <td>{{ loan.borrow_date | fmt }}</td>
           <td>{{ loan.due_date | fmt }}</td>
           <td class="status {{ css }}">{{ label }}</td>
+          <td>
+            {% if loan.deposit_held %}
+              {{ loan.deposit_held | money }} {{ "held" if loan.is_active else "refunded" }}
+            {% else %}
+              <span class="muted">None</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if loan.is_active %}
+              <form method="post" action="{{ url_for('return_loan', member_id=member.member_id, loan_id=loan.loan_id) }}">
+                <button type="submit">Return</button>
+              </form>
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
     </table>
@@ -25,12 +39,21 @@
 
   <h3>Borrow a duck</h3>
   {% if ducks %}
-    <p class="muted">Ducks borrowed today are due back on <strong>{{ due_if_borrowed_today | fmt }}</strong>.</p>
+    <p class="muted">You can keep a Deluxe duck longer, but it needs a deposit. You get the deposit back in full when you return the duck.</p>
     <table>
-      <tr><th>Duck</th><th></th></tr>
+      <tr><th>Duck</th><th>Type</th><th>Due back if borrowed today</th><th>Deposit</th><th></th></tr>
       {% for duck in ducks %}
         <tr>
           <td>{{ duck.duck_id }}</td>
+          <td>{{ duck.label }}</td>
+          <td>{{ due_date_for(duck, today) | fmt }}</td>
+          <td>
+            {% if duck.required_deposit %}
+              {{ duck.required_deposit | money }} <span class="muted">(refundable)</span>
+            {% else %}
+              <span class="muted">None</span>
+            {% endif %}
+          </td>
           <td>
             <form method="post" action="{{ url_for('borrow', member_id=member.member_id) }}">
               <input type="hidden" name="duck_id" value="{{ duck.duck_id }}">
