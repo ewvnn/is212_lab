@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ member.name }} · Duck Library{% endblock %}
+{% block content %}
+  <h2>{{ member.name }} <span class="muted">({{ member.member_id }})</span></h2>
+  <p class="muted">Today is {{ today | fmt }}.</p>
+
+  <h3>My loans</h3>
+  {% if member.loans %}
+    <table>
+      <tr><th>Loan</th><th>Duck</th><th>Borrowed</th><th>Due back</th><th>Status</th></tr>
+      {% for loan in member.loans %}
+        {% set label, css = loan_status(loan, today) %}
+        <tr>
+          <td>{{ loan.loan_id }}</td>
+          <td>{{ loan.duck_id }}</td>
+          <td>{{ loan.borrow_date | fmt }}</td>
+          <td>{{ loan.due_date | fmt }}</td>
+          <td class="status {{ css }}">{{ label }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">You haven't borrowed any ducks yet.</p>
+  {% endif %}
+
+  <h3>Borrow a duck</h3>
+  {% if ducks %}
+    <p class="muted">Ducks borrowed today are due back on <strong>{{ due_if_borrowed_today | fmt }}</strong>.</p>
+    <table>
+      <tr><th>Duck</th><th></th></tr>
+      {% for duck in ducks %}
+        <tr>
+          <td>{{ duck.duck_id }}</td>
+          <td>
+            <form method="post" action="{{ url_for('borrow', member_id=member.member_id) }}">
+              <input type="hidden" name="duck_id" value="{{ duck.duck_id }}">
+              <button type="submit">Borrow</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">Every duck is out on loan right now.</p>
+  {% endif %}
+{% endblock %}

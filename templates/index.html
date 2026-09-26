@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+  <p class="muted">Prototype: no login. Pick a member to act as.</p>
+  <table>
+    <tr><th>Member ID</th><th>Name</th><th>Active loans</th></tr>
+    {% for member in members %}
+      <tr>
+        <td><a href="{{ url_for('member_page', member_id=member.member_id) }}">{{ member.member_id }}</a></td>
+        <td>{{ member.name }}</td>
+        <td>{{ member.loans | selectattr('is_active') | list | length }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+{% endblock %}
